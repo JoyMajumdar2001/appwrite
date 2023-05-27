@@ -1,0 +1,1 @@
+Update the user labels by its unique ID. The array you pass is stored as is, and replaces any previous value. Each label has a maximum of 128 characters.
