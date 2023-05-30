@@ -1529,11 +1529,11 @@ App::patch('/v1/account/name')
     ->inject('user')
     ->inject('dbForProject')
     ->inject('events')
-    ->action(function (string $name, ?\DateTime $requestTimestamp, Response $response, Document $user, Database $dbForProject, Event $events) {
+    ->inject('prepareUserSearch')
+    ->action(function (string $name, ?\DateTime $requestTimestamp, Response $response, Document $user, Database $dbForProject, Event $events, callable $prepareUserSearch) {
 
-        $user
-            ->setAttribute('name', $name)
-            ->setAttribute('search', implode(' ', [$user->getId(), $name, $user->getAttribute('email', ''), $user->getAttribute('phone', '')]));
+        $user->setAttribute('name', $name);
+        $user->setAttribute('search', $prepareUserSearch($user));
 
         $user = $dbForProject->withRequestTimestamp($requestTimestamp, fn () => $dbForProject->updateDocument('users', $user->getId(), $user));
 
@@ -1628,7 +1628,8 @@ App::patch('/v1/account/email')
     ->inject('user')
     ->inject('dbForProject')
     ->inject('events')
-    ->action(function (string $email, string $password, ?\DateTime $requestTimestamp, Response $response, Document $user, Database $dbForProject, Event $events) {
+    ->inject('prepareUserSearch')
+    ->action(function (string $email, string $password, ?\DateTime $requestTimestamp, Response $response, Document $user, Database $dbForProject, Event $events, callable $prepareUserSearch) {
         $isAnonymousUser = Auth::isAnonymousUser($user); // Check if request is from an anonymous account for converting
 
         if (
@@ -1646,7 +1647,8 @@ App::patch('/v1/account/email')
             ->setAttribute('hashOptions', $isAnonymousUser ? Auth::DEFAULT_ALGO_OPTIONS : $user->getAttribute('hashOptions', ''))
             ->setAttribute('email', $email)
             ->setAttribute('emailVerification', false) // After this user needs to confirm mail again
-            ->setAttribute('search', implode(' ', [$user->getId(), $user->getAttribute('name', ''), $email, $user->getAttribute('phone', '')]));
+        ;
+        $user->setAttribute('search', $prepareUserSearch($user));
 
         try {
             $user = $dbForProject->withRequestTimestamp($requestTimestamp, fn () => $dbForProject->updateDocument('users', $user->getId(), $user));
@@ -1684,7 +1686,8 @@ App::patch('/v1/account/phone')
     ->inject('user')
     ->inject('dbForProject')
     ->inject('events')
-    ->action(function (string $phone, string $password, ?\DateTime $requestTimestamp, Response $response, Document $user, Database $dbForProject, Event $events) {
+    ->inject('prepareUserSearch')
+    ->action(function (string $phone, string $password, ?\DateTime $requestTimestamp, Response $response, Document $user, Database $dbForProject, Event $events, callable $prepareUserSearch) {
 
         $isAnonymousUser = Auth::isAnonymousUser($user); // Check if request is from an anonymous account for converting
 
@@ -1698,7 +1701,8 @@ App::patch('/v1/account/phone')
         $user
             ->setAttribute('phone', $phone)
             ->setAttribute('phoneVerification', false) // After this user needs to confirm phone number again
-            ->setAttribute('search', implode(' ', [$user->getId(), $user->getAttribute('name', ''), $user->getAttribute('email', ''), $phone]));
+        ;
+        $user->setAttribute('search', $prepareUserSearch($user));
 
         try {
             $user = $dbForProject->withRequestTimestamp($requestTimestamp, fn () => $dbForProject->updateDocument('users', $user->getId(), $user));
